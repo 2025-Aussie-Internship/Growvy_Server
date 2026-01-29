@@ -45,6 +45,7 @@ Thumbs.db
 firebase-service-account.json
 application.yml
 application-*.yml
+src/main/resources/*.env
 
 ### Docker ###
 *.tar

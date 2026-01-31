@@ -112,9 +112,14 @@ public class JobPostService {
         res.setEndTime(savedJobPost.getEndTime());
         res.setHourlyWage(savedJobPost.getHourlyWage());
         res.setJobAddress(savedJobPost.getJobAddress());
+        res.setLat(savedJobPost.getLat());
+        res.setLng(savedJobPost.getLng());
+        res.setStatus(savedJobPost.getStatus().name());
+        res.setCreatedAt(savedJobPost.getCreatedAt());
         res.setTags(savedJobPost.getJobPostTags().stream()
                 .map(jpt -> jpt.getInterest().getName())
                 .toList());
+        res.setSuccess(true);
 
         return res;
     }

@@ -1,14 +1,20 @@
 package com.growvy.controller;
 
+import com.growvy.dto.req.JobPostRequest;
+import com.growvy.dto.req.JobSeekerSignUpRequest;
 import com.growvy.dto.res.JobPostResponse;
+import com.growvy.dto.res.SignUpResponse;
+import com.growvy.entity.JobPost;
 import com.growvy.entity.JobSeekerProfile;
 import com.growvy.entity.User;
 import com.growvy.repository.UserRepository;
 import com.growvy.service.JobPostService;
 import com.growvy.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -25,17 +31,44 @@ public class JobPostController {
     public List<JobPostResponse> getPosts(
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
-            @RequestHeader("Authorization") String jwt
+            @RequestHeader("Authorization") String header
     ) {
+        // JWT 추출
+        String jwt = header.replace("Bearer ", "").trim();
         String firebaseUid = jwtProvider.getFirebaseUid(jwt);
+
+        // 사용자 조회
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         JobSeekerProfile jobSeeker = user.getJobSeekerProfile();
 
+        // 날짜 파싱
         LocalDate start = (startDate != null) ? LocalDate.parse(startDate) : null;
         LocalDate end = (endDate != null) ? LocalDate.parse(endDate) : null;
 
         return jobPostService.getAcceptedPosts(jobSeeker, start, end);
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<JobPostResponse> createPost(
+            @RequestHeader("Authorization") String header,
+            @RequestBody JobPostRequest request
+    ) {
+        // JWT 추출
+        String jwt = header.replace("Bearer ", "").trim();
+        String firebaseUid = jwtProvider.getFirebaseUid(jwt);
+
+        // 사용자 조회
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        // 게시물 생성 및 DTO 반환
+        JobPostResponse res = jobPostService.createJobPost(user, request);
+
+        // 성공 여부 세팅
+        res.setSuccess(true);
+
+        return ResponseEntity.ok(res);
     }
 }

@@ -82,24 +82,22 @@ public class JobPostService {
         jobPost.setLat(coords.get("lat"));
         jobPost.setLng(coords.get("lng"));
 
-        // save 한 번만, Lambda에서 safe
         JobPost savedJobPost = jobPostRepository.save(jobPost);
 
         // 2. 태그 연결
-        List<JobPostTag> tags = req.getInterestIds().stream()
-                .map(interestId -> {
-                    Interest interest = interestRepository.findById(interestId)
-                            .orElseThrow(() -> new IllegalArgumentException("Interest가 존재하지 않음: " + interestId));
-                    JobPostTag tag = new JobPostTag();
-                    tag.setId(new JobPostTagId(savedJobPost.getId(), interestId));
-                    tag.setJobPost(savedJobPost);
-                    tag.setInterest(interest);
-                    return tag;
-                })
-                .collect(Collectors.toList());
+        if (req.getInterestIds() != null && !req.getInterestIds().isEmpty()) {
+            for (Long interestId : req.getInterestIds()) {
+                Interest interest = interestRepository.findById(interestId)
+                        .orElseThrow(() -> new IllegalArgumentException("Interest가 존재하지 않음: " + interestId));
 
-        jobPostTagRepository.saveAll(tags);
-        savedJobPost.setJobPostTags(tags);
+                JobPostTag tag = new JobPostTag();
+                tag.setJobPost(savedJobPost);
+                tag.setInterest(interest);
+                tag.setId(new JobPostTagId(savedJobPost.getId(), interestId));
+
+                jobPostTagRepository.save(tag);
+            }
+        }
 
         // 3. DTO 반환
         JobPostResponse res = new JobPostResponse();
@@ -114,7 +112,9 @@ public class JobPostService {
         res.setEndTime(savedJobPost.getEndTime());
         res.setHourlyWage(savedJobPost.getHourlyWage());
         res.setJobAddress(savedJobPost.getJobAddress());
-        res.setTags(tags.stream().map(tag -> tag.getInterest().getName()).toList());
+        res.setTags(savedJobPost.getJobPostTags().stream()
+                .map(jpt -> jpt.getInterest().getName())
+                .toList());
 
         return res;
     }

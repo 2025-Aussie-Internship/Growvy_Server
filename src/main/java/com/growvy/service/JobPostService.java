@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,31 +29,48 @@ public class JobPostService {
     private final InterestRepository interestRepository;
     private final GeoService geoService;
 
-    // 내가 신청한 일 목록 (조회 API)
-    public List<JobPostResponse> getAcceptedPosts(JobSeekerProfile jobSeeker, LocalDate start, LocalDate end) {
-        // 기본값 처리
-        if (start == null) start = LocalDate.now();
-        if (end == null) end = LocalDate.now();
+    // 모든 일 최신순 조회 API (신청한 것 제외)
+    public List<JobPostResponse> getAllPostsExcludingMyApplications(JobSeekerProfile jobSeeker) {
 
-        List<Application> applications = applicationRepository.findAcceptedApplicationsWithTags(jobSeeker, start, end);
+        // 1. 내가 신청한 게시물 ID 가져오기
+        List<Long> appliedJobIds = applicationRepository.findByJobSeeker(jobSeeker)
+                .stream()
+                .map(app -> app.getJobPost().getId())
+                .toList();
 
-        return applications.stream().map(a -> {
-            JobPost jp = a.getJobPost();
-
-            List<String> tags = jp.getJobPostTags().stream()
-                    .map(jpt -> jpt.getInterest().getName())
-                    .collect(Collectors.toList());
-
-            JobPostResponse dto = new JobPostResponse();
-            dto.setTitle(jp.getTitle());
-            dto.setCompanyName(jp.getCompanyName());
-            dto.setStartTime(jp.getStartTime());
-            dto.setEndTime(jp.getEndTime());
-            dto.setTags(tags);
-
-            return dto;
-        }).collect(Collectors.toList());
+        // 2. 모든 게시물 중 내가 신청하지 않은 것, 최신순 정렬
+        List<JobPost> posts;
+        if (appliedJobIds.isEmpty()) {
+            posts = jobPostRepository.findAllByOrderByCreatedAtDesc();
+        } else {
+            posts = jobPostRepository.findAllByIdNotInOrderByCreatedAtDesc(appliedJobIds);
+        }
+        // 3. DTO 변환
+        return posts.stream().map(jp -> {
+            JobPostResponse res = new JobPostResponse();
+            res.setId(jp.getId());
+            res.setTitle(jp.getTitle());
+            res.setCompanyName(jp.getCompanyName());
+            res.setDescription(jp.getDescription());
+            res.setCount(jp.getCount());
+            res.setStartDate(jp.getStartDate());
+            res.setEndDate(jp.getEndDate());
+            res.setStartTime(jp.getStartTime());
+            res.setEndTime(jp.getEndTime());
+            res.setHourlyWage(jp.getHourlyWage());
+            res.setJobAddress(jp.getJobAddress());
+            res.setLat(jp.getLat());
+            res.setLng(jp.getLng());
+            res.setCreatedAt(jp.getCreatedAt());
+            res.setStatus(jp.getStatus().name());
+            res.setTags(jp.getJobPostTags().stream()
+                    .map(tag -> tag.getInterest().getName())
+                    .toList());
+            res.setSuccess(true);
+            return res;
+        }).toList();
     }
+
 
     // 글 등록 API
     @Transactional
@@ -85,6 +103,7 @@ public class JobPostService {
         JobPost savedJobPost = jobPostRepository.save(jobPost);
 
         // 2. 태그 연결
+        List<JobPostTag> savedTags = new ArrayList<>();
         if (req.getInterestIds() != null && !req.getInterestIds().isEmpty()) {
             for (Long interestId : req.getInterestIds()) {
                 Interest interest = interestRepository.findById(interestId)
@@ -96,6 +115,7 @@ public class JobPostService {
                 tag.setId(new JobPostTagId(savedJobPost.getId(), interestId));
 
                 jobPostTagRepository.save(tag);
+                savedTags.add(tag);  // 리스트에 저장
             }
         }
 
@@ -112,9 +132,14 @@ public class JobPostService {
         res.setEndTime(savedJobPost.getEndTime());
         res.setHourlyWage(savedJobPost.getHourlyWage());
         res.setJobAddress(savedJobPost.getJobAddress());
-        res.setTags(savedJobPost.getJobPostTags().stream()
+        res.setLat(savedJobPost.getLat());
+        res.setLng(savedJobPost.getLng());
+        res.setStatus(savedJobPost.getStatus().name());
+        res.setCreatedAt(savedJobPost.getCreatedAt());
+        res.setTags(savedTags.stream()
                 .map(jpt -> jpt.getInterest().getName())
                 .toList());
+        res.setSuccess(true);
 
         return res;
     }

@@ -11,6 +11,9 @@ import java.util.List;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
 
+    // 모든 일 조회
+    List<Application> findByJobSeeker(JobSeekerProfile jobSeeker);
+
     @Query("""
         SELECT a FROM Application a
         JOIN FETCH a.jobPost jp

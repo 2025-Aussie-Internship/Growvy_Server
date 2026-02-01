@@ -27,29 +27,23 @@ public class JobPostController {
     private final JwtUtil jwtProvider;
     private final UserRepository userRepository;
 
-    @GetMapping("/task")
-    public List<JobPostResponse> getPosts(
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate,
+    // 모든 일 최신순 조회 API (신청한 것 제외)
+    @GetMapping("/all")
+    public List<JobPostResponse> getAllPostsExcludingMyApplications(
             @RequestHeader("Authorization") String header
     ) {
-        // JWT 추출
         String jwt = header.replace("Bearer ", "").trim();
         String firebaseUid = jwtProvider.getFirebaseUid(jwt);
 
-        // 사용자 조회
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         JobSeekerProfile jobSeeker = user.getJobSeekerProfile();
 
-        // 날짜 파싱
-        LocalDate start = (startDate != null) ? LocalDate.parse(startDate) : null;
-        LocalDate end = (endDate != null) ? LocalDate.parse(endDate) : null;
-
-        return jobPostService.getAcceptedPosts(jobSeeker, start, end);
+        return jobPostService.getAllPostsExcludingMyApplications(jobSeeker);
     }
 
+    // 구인자 공고 등록 API
     @PostMapping("/upload")
     public ResponseEntity<JobPostResponse> createPost(
             @RequestHeader("Authorization") String header,

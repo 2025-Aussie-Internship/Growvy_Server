@@ -12,6 +12,12 @@ import java.util.List;
 
 public interface JobPostRepository extends JpaRepository<JobPost, Long> {
 
+    // 모든 공고 가져오기
+    List<JobPost> findAllByIdNotInOrderByCreatedAtDesc(List<Long> excludedIds);
+
+    // 최신 순 조회
+    List<JobPost> findAllByOrderByCreatedAtDesc();
+
     // 최신 공고 가져오기
     @Query("""
     SELECT DISTINCT jp

@@ -1,5 +1,6 @@
 package com.growvy.repository;
 
+import com.growvy.entity.EmployerProfile;
 import com.growvy.entity.JobPost;
 import com.growvy.entity.JobSeekerProfile;
 import com.growvy.entity.User;
@@ -35,5 +36,17 @@ public interface JobPostRepository extends JpaRepository<JobPost, Long> {
 
     // 내가 신청한 게시물 제외, 인기순, OPEN인 것만
     List<JobPost> findAllByIdNotInAndStatusOrderByViewDesc(List<Long> ids, JobPost.Status status);
+
+    // DONE 제외 공고 조회
+    List<JobPost> findByUserAndStatusNot(User user, JobPost.Status status);
+
+    // DONE 공고만 조회 (Employer)
+    List<JobPost> findByUserAndStatus(User user, JobPost.Status status);
+
+    // DONE + works (hourly_wage != 0)
+    List<JobPost> findByUserAndStatusAndHourlyWageNot(User user, JobPost.Status status, int hourlyWage);
+
+    // DONE + volunteer (hourly_wage == 0)
+    List<JobPost> findByUserAndStatusAndHourlyWage(User user, JobPost.Status status, int hourlyWage);
 
 }

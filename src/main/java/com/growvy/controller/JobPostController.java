@@ -10,6 +10,7 @@ import com.growvy.entity.User;
 import com.growvy.repository.UserRepository;
 import com.growvy.service.JobPostService;
 import com.growvy.util.JwtUtil;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +29,7 @@ public class JobPostController {
     private final UserRepository userRepository;
 
     // 모든 일 최신순 조회 API (신청한 것 제외)
+    @Operation(summary = "최신순 조회 API", description = "모든 post를 최신순으로 조회")
     @GetMapping("/all")
     public List<JobPostResponse> getAllPostsExcludingMyApplications(
             @RequestHeader("Authorization") String header
@@ -43,7 +45,40 @@ public class JobPostController {
         return jobPostService.getAllPostsExcludingMyApplications(jobSeeker);
     }
 
+    // 모든 일 인기순 조회 API (신청한 것 제외)
+    @Operation(summary = "인기순 조회 API", description = "모든 post를 인기순으로 조회")
+    @GetMapping("/all/popular")
+    public List<JobPostResponse> getAllPostsByPopularity(
+            @RequestHeader("Authorization") String header
+    ) {
+        String jwt = header.replace("Bearer ", "").trim();
+        String firebaseUid = jwtProvider.getFirebaseUid(jwt);
+
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        JobSeekerProfile jobSeeker = user.getJobSeekerProfile();
+
+        return jobPostService.getAllPostsByPopularity(jobSeeker);
+    }
+
+    // 상세 조회 API
+    @Operation(summary = "상세 조회 API", description = "개별 post를 상세 조회")
+    @GetMapping("/{postId}")
+    public JobPostResponse getPostDetail(
+            @RequestHeader("Authorization") String header,
+            @PathVariable Long postId
+    ) {
+        // 토큰 검증만
+        String jwt = header.replace("Bearer ", "").trim();
+        jwtProvider.getFirebaseUid(jwt);
+
+        return jobPostService.getPostDetail(postId);
+    }
+
+
     // 구인자 공고 등록 API
+    @Operation(summary = "Employer-공고 등록 API", description = "공고 등록")
     @PostMapping("/upload")
     public ResponseEntity<JobPostResponse> createPost(
             @RequestHeader("Authorization") String header,
@@ -59,10 +94,24 @@ public class JobPostController {
 
         // 게시물 생성 및 DTO 반환
         JobPostResponse res = jobPostService.createJobPost(user, request);
-
-        // 성공 여부 세팅
-        res.setSuccess(true);
-
         return ResponseEntity.ok(res);
+    }
+
+    @Operation(summary = "JobSeeker-특정 기간 공고 조회 API", description = "today, week, calender 공고 조회")
+    // 내가 신청한 일 중에 특정기간 조회
+    @GetMapping("my/range")
+    public List<JobPostResponse> getMyAcceptedClosedJobs(
+            @RequestHeader("Authorization") String header,
+            @RequestParam String startDate,
+            @RequestParam String endDate
+    ) {
+        String jwt = header.replace("Bearer ", "").trim();
+        String firebaseUid = jwtProvider.getFirebaseUid(jwt);
+
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        JobSeekerProfile jobSeeker = user.getJobSeekerProfile();
+
+        return jobPostService.getMyAcceptedClosedJobs(jobSeeker, startDate, endDate);
     }
 }

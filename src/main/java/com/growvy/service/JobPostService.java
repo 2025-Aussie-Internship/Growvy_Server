@@ -3,11 +3,8 @@ package com.growvy.service;
 import com.growvy.dto.req.JobPostRequest;
 import com.growvy.dto.res.JobPostResponse;
 import com.growvy.entity.*;
-import com.growvy.repository.ApplicationRepository;
-import com.growvy.repository.InterestRepository;
-import com.growvy.repository.JobPostRepository;
-import com.growvy.repository.JobPostTagRepository;
-import jakarta.transaction.Transactional;
+import com.growvy.repository.*;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,11 +25,12 @@ public class JobPostService {
     private final JobPostTagRepository jobPostTagRepository;
     private final InterestRepository interestRepository;
     private final GeoService geoService;
+    private final JobPostImageRepository jobPostImageRepository;
 
     // 모든 일 최신순 조회 API (신청한 것 제외)
     public List<JobPostResponse> getAllPostsExcludingMyApplications(JobSeekerProfile jobSeeker) {
 
-        // 1. 내가 신청한 게시물 ID 가져오기
+        // 1. 내가 신청한 게시물 ID
         List<Long> appliedJobIds = applicationRepository.findByJobSeeker(jobSeeker)
                 .stream()
                 .map(app -> app.getJobPost().getId())
@@ -41,10 +39,11 @@ public class JobPostService {
         // 2. 모든 게시물 중 내가 신청하지 않은 것, 최신순 정렬
         List<JobPost> posts;
         if (appliedJobIds.isEmpty()) {
-            posts = jobPostRepository.findAllByOrderByCreatedAtDesc();
+            posts = jobPostRepository.findAllByStatusOrderByCreatedAtDesc(JobPost.Status.OPEN);
         } else {
-            posts = jobPostRepository.findAllByIdNotInOrderByCreatedAtDesc(appliedJobIds);
+            posts = jobPostRepository.findAllByIdNotInAndStatusOrderByCreatedAtDesc(appliedJobIds, JobPost.Status.OPEN);
         }
+
         // 3. DTO 변환
         return posts.stream().map(jp -> {
             JobPostResponse res = new JobPostResponse();
@@ -66,13 +65,99 @@ public class JobPostService {
             res.setTags(jp.getJobPostTags().stream()
                     .map(tag -> tag.getInterest().getName())
                     .toList());
-            res.setSuccess(true);
             return res;
         }).toList();
     }
 
 
-    // 글 등록 API
+    // 인기순 정렬 API (조회수 기반)
+    public List<JobPostResponse> getAllPostsByPopularity(JobSeekerProfile jobSeeker) {
+
+        // 1. 내가 신청한 게시물 ID
+        List<Long> appliedJobIds = applicationRepository.findByJobSeeker(jobSeeker)
+                .stream()
+                .map(app -> app.getJobPost().getId())
+                .toList();
+
+        // 2. 인기순 조회
+        List<JobPost> posts;
+        if (appliedJobIds.isEmpty()) {
+            posts = jobPostRepository.findAllByStatusOrderByViewDesc(JobPost.Status.OPEN);
+        } else {
+            posts = jobPostRepository.findAllByIdNotInAndStatusOrderByViewDesc(appliedJobIds, JobPost.Status.OPEN);
+        }
+
+        // 3. DTO 변환
+        return posts.stream().map(jp -> {
+            JobPostResponse res = new JobPostResponse();
+            res.setId(jp.getId());
+            res.setTitle(jp.getTitle());
+            res.setCompanyName(jp.getCompanyName());
+            res.setDescription(jp.getDescription());
+            res.setCount(jp.getCount());
+            res.setStartDate(jp.getStartDate());
+            res.setEndDate(jp.getEndDate());
+            res.setStartTime(jp.getStartTime());
+            res.setEndTime(jp.getEndTime());
+            res.setHourlyWage(jp.getHourlyWage());
+            res.setJobAddress(jp.getJobAddress());
+            res.setLat(jp.getLat());
+            res.setLng(jp.getLng());
+            res.setCreatedAt(jp.getCreatedAt());
+            res.setStatus(jp.getStatus().name());
+            res.setTags(
+                    jp.getJobPostTags().stream()
+                            .map(tag -> tag.getInterest().getName())
+                            .toList()
+            );
+            return res;
+        }).toList();
+    }
+
+
+    // 상세 조회 API
+    @Transactional
+    public JobPostResponse getPostDetail(Long postId) {
+
+        JobPost jobPost = jobPostRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("공고를 찾을 수 없습니다."));
+
+        // 조회수 증가
+        Long view = jobPost.getView();
+        jobPost.setView(view == null ? 1L : view + 1);
+
+        JobPostResponse res = new JobPostResponse();
+        res.setId(jobPost.getId());
+        res.setTitle(jobPost.getTitle());
+        res.setCompanyName(jobPost.getCompanyName());
+        res.setDescription(jobPost.getDescription());
+        res.setCount(jobPost.getCount());
+        res.setStartDate(jobPost.getStartDate());
+        res.setEndDate(jobPost.getEndDate());
+        res.setStartTime(jobPost.getStartTime());
+        res.setEndTime(jobPost.getEndTime());
+        res.setHourlyWage(jobPost.getHourlyWage());
+        res.setJobAddress(jobPost.getJobAddress());
+        res.setLat(jobPost.getLat());
+        res.setLng(jobPost.getLng());
+        res.setCreatedAt(jobPost.getCreatedAt());
+        res.setStatus(jobPost.getStatus().name());
+        res.setTags(
+                jobPost.getJobPostTags().stream()
+                        .map(tag -> tag.getInterest().getName())
+                        .toList()
+        );
+        res.setImageUrls(
+                jobPost.getJobPostImages().stream()
+                        .sorted((a, b) -> a.getSortOrder().compareTo(b.getSortOrder()))
+                        .map(JobPostImage::getImageUrl)
+                        .toList()
+        );
+        return res;
+    }
+
+
+    // 글 등록 API (이미지 포함)
     @Transactional
     public JobPostResponse createJobPost(User user, JobPostRequest req) {
 
@@ -96,7 +181,6 @@ public class JobPostService {
         if (coords == null || coords.get("lat") == null || coords.get("lng") == null) {
             throw new IllegalStateException("사업장 주소 좌표 변환 실패");
         }
-        log.info("JobPost에 넣는 좌표: lat={}, lng={}", coords.get("lat"), coords.get("lng"));
         jobPost.setLat(coords.get("lat"));
         jobPost.setLng(coords.get("lng"));
 
@@ -115,11 +199,25 @@ public class JobPostService {
                 tag.setId(new JobPostTagId(savedJobPost.getId(), interestId));
 
                 jobPostTagRepository.save(tag);
-                savedTags.add(tag);  // 리스트에 저장
+                savedTags.add(tag);
             }
         }
 
-        // 3. DTO 반환
+        // 3. 이미지 연결
+        List<JobPostImage> savedImages = new ArrayList<>();
+        if (req.getImageUrls() != null && !req.getImageUrls().isEmpty()) {
+            for (int i = 0; i < req.getImageUrls().size(); i++) {
+                String url = req.getImageUrls().get(i);
+                JobPostImage img = new JobPostImage();
+                img.setJobPost(savedJobPost);
+                img.setImageUrl(url);
+                img.setSortOrder(i + 1);
+                jobPostImageRepository.save(img);
+                savedImages.add(img);
+            }
+        }
+
+        // 4. DTO 반환
         JobPostResponse res = new JobPostResponse();
         res.setId(savedJobPost.getId());
         res.setTitle(savedJobPost.getTitle());
@@ -139,8 +237,34 @@ public class JobPostService {
         res.setTags(savedTags.stream()
                 .map(jpt -> jpt.getInterest().getName())
                 .toList());
-        res.setSuccess(true);
-
+        res.setImageUrls(savedImages.stream()
+                .map(JobPostImage::getImageUrl)
+                .toList());
         return res;
+    }
+
+    // 신청한 일 중에 특정 기간 조회
+    public List<JobPostResponse> getMyAcceptedClosedJobs(JobSeekerProfile jobSeeker, String start, String end) {
+        LocalDate startDate = LocalDate.parse(start);
+        LocalDate endDate = LocalDate.parse(end);
+
+        List<Application> apps = applicationRepository.findAcceptedClosedApplicationsWithTags(
+                jobSeeker, startDate, endDate
+        );
+
+        // DTO 변환: 필요한 정보만
+        return apps.stream()
+                .map(app -> {
+                    JobPost jp = app.getJobPost();
+                    JobPostResponse res = new JobPostResponse();
+                    res.setId(jp.getId());
+                    res.setTitle(jp.getTitle());
+                    res.setStartDate(jp.getStartDate());
+                    res.setEndDate(jp.getEndDate());
+                    res.setStartTime(jp.getStartTime());
+                    res.setEndTime(jp.getEndTime());
+                    return res;
+                })
+                .toList();
     }
 }

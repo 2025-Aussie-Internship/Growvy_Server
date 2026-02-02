@@ -18,22 +18,22 @@ public interface JobPostRepository extends JpaRepository<JobPost, Long> {
     // 최신 순 조회
     List<JobPost> findAllByOrderByCreatedAtDesc();
 
-    // 최신 공고 가져오기
-    @Query("""
-    SELECT DISTINCT jp
-    FROM JobPost jp
-    LEFT JOIN jp.jobPostTags jpt
-    LEFT JOIN jpt.interest i
-    WHERE jp.status = :status
-      AND jp.id NOT IN (
-          SELECT a.jobPost.id
-          FROM Application a
-          WHERE a.jobSeeker = :jobSeeker
-      )
-    ORDER BY jp.createdAt DESC
-""")
-    List<JobPost> findNewestOpenPostsByJobSeeker(
-            @Param("jobSeeker") JobSeekerProfile jobSeeker,
-            @Param("status") JobPost.Status status
-    );
+    // 인기 순 조회 (신청한 것 제외)
+    List<JobPost> findAllByIdNotInOrderByViewDesc(List<Long> excludedIds);
+
+    // 전체 인기순
+    List<JobPost> findAllByOrderByViewDesc();
+
+    // 최신순, OPEN인 것만
+    List<JobPost> findAllByStatusOrderByCreatedAtDesc(JobPost.Status status);
+
+    // 인기순, OPEN인 것만
+    List<JobPost> findAllByStatusOrderByViewDesc(JobPost.Status status);
+
+    // 내가 신청한 게시물 제외, 최신순, OPEN인 것만
+    List<JobPost> findAllByIdNotInAndStatusOrderByCreatedAtDesc(List<Long> ids, JobPost.Status status);
+
+    // 내가 신청한 게시물 제외, 인기순, OPEN인 것만
+    List<JobPost> findAllByIdNotInAndStatusOrderByViewDesc(List<Long> ids, JobPost.Status status);
+
 }

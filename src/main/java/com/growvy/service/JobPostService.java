@@ -157,7 +157,6 @@ public class JobPostService {
     }
 
 
-    // 글 등록 API (이미지 포함)
     @Transactional
     public JobPostResponse createJobPost(User user, JobPostRequest req) {
 
@@ -183,6 +182,11 @@ public class JobPostService {
         }
         jobPost.setLat(coords.get("lat"));
         jobPost.setLng(coords.get("lng"));
+
+        // city / state 파싱
+        String[] parsed = parseCityAndState(req.getJobAddress());
+        jobPost.setCity(parsed[0]);
+        jobPost.setState(parsed[1]);
 
         JobPost savedJobPost = jobPostRepository.save(jobPost);
 
@@ -232,6 +236,8 @@ public class JobPostService {
         res.setJobAddress(savedJobPost.getJobAddress());
         res.setLat(savedJobPost.getLat());
         res.setLng(savedJobPost.getLng());
+        res.setCity(savedJobPost.getCity());
+        res.setState(savedJobPost.getState());
         res.setStatus(savedJobPost.getStatus().name());
         res.setCreatedAt(savedJobPost.getCreatedAt());
         res.setTags(savedTags.stream()
@@ -242,6 +248,18 @@ public class JobPostService {
                 .toList());
         return res;
     }
+
+    // 주소를 쉼표 기준으로 파싱하여 city와 state 반환
+    private String[] parseCityAndState(String address) {
+        if (address == null || address.isBlank()) {
+            return new String[]{null, null};
+        }
+        String[] parts = address.split(",");
+        String city = parts[1].trim();
+        String state = parts[2].trim();
+        return new String[]{city, state};
+    }
+
 
     // 신청한 일 중에 특정 기간 조회
     public List<JobPostResponse> getMyAcceptedClosedJobs(JobSeekerProfile jobSeeker, String start, String end) {

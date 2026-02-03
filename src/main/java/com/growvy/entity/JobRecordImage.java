@@ -1,5 +1,6 @@
 package com.growvy.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,7 +9,7 @@ import lombok.Setter;
 @Table(name = "records_images")
 @Getter
 @Setter
-public class RecordImage {
+public class JobRecordImage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -16,7 +17,8 @@ public class RecordImage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "record_id")
-    private Record record;
+    @JsonBackReference  // 직렬화에서 무한 재귀 방지
+    private JobRecord jobRecord;
 
     @Column(name = "image_url", nullable = false)
     private String imageUrl;

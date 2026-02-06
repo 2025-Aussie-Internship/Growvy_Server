@@ -1,2 +1,2 @@
 # Growvy_Server
-2025 Australia Global Internship Project “Growvy”
+2025 Australia Global Internship Project [Growvy] Server Repository

@@ -17,7 +17,7 @@ public class JobRecordController {
     private final JobRecordService jobRecordService;
     private final AuthService authService;
 
-    @Operation(summary = "JobSeeker-기록 업로드", description = "기록 저장 (isCompleted=true/false 선택 가능)")
+    @Operation(summary = "[JobSeeker] 기록 업로드", description = "기록 저장 (isCompleted=true/false 선택 가능)")
     @PostMapping("/upload")
     public ResponseEntity<String> uploadRecord(
             @RequestHeader("Authorization") String header,
@@ -35,7 +35,7 @@ public class JobRecordController {
         return ResponseEntity.ok("기록이 저장되었습니다.");
     }
 
-    @Operation(summary = "JobSeeker-기록 조회", description = "선택한 공고의 작성된 기록 정보 조회")
+    @Operation(summary = "[JobSeeker] 기록 조회", description = "선택한 공고의 작성된 기록 정보 조회")
     @GetMapping("/get")
     public ResponseEntity<JobRecord> getRecord(
             @RequestHeader("Authorization") String header,
@@ -48,7 +48,7 @@ public class JobRecordController {
         return ResponseEntity.ok(record);
     }
 
-    @Operation(summary = "JobSeeker-기록 삭제", description = "선택한 공고의 작성된 기록 삭제")
+    @Operation(summary = "[JobSeeker] 기록 삭제", description = "선택한 공고의 작성된 기록 삭제")
     @DeleteMapping("/delete")
     public ResponseEntity<String> deleteRecord(
             @RequestHeader("Authorization") String header,
@@ -61,7 +61,7 @@ public class JobRecordController {
         return ResponseEntity.ok("기록이 삭제되었습니다.");
     }
 
-    @Operation(summary = "JobSeeker-완료 기록 수정", description = "isCompleted=true인 기록만 수정 가능")
+    @Operation(summary = "[JobSeeker] 완료 기록 수정", description = "isCompleted=true인 기록만 수정 가능")
     @PutMapping("/update")
     public ResponseEntity<String> updateCompletedRecord(
             @RequestHeader("Authorization") String header,

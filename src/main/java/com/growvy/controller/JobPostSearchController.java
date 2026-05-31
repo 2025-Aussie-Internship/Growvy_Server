@@ -21,7 +21,7 @@ public class JobPostSearchController {
     private final JwtUtil jwtProvider;
     private final UserRepository userRepository;
 
-    @Operation(summary = "검색 API", description = "keyword 포함 게시물 반환")
+    @Operation(summary = "[공통] 검색 API", description = "keyword 포함 게시물 반환")
     @GetMapping("/search")
     public ResponseEntity<List<JobPostResponse>> searchJobPosts(
             @RequestHeader("Authorization") String header,

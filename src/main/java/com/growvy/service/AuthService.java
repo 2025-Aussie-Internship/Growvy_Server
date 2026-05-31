@@ -1,7 +1,9 @@
 package com.growvy.service;
 
+import com.growvy.dto.req.EmployerProfileUpdateRequest;
 import com.growvy.dto.req.EmployerSignUpRequest;
 import com.growvy.dto.req.JobSeekerSignUpRequest;
+import com.growvy.dto.req.JobSeekerProfileUpdateRequest;
 import com.growvy.dto.res.AuthResponse;
 import com.growvy.dto.res.IsEmployerResponse;
 import com.growvy.entity.*;
@@ -172,7 +174,7 @@ public class AuthService {
 
         jobSeekerProfileRepository.save(jobSeekerProfile);
 
-        // 3. 관심사 연결
+        // 3. 관심사DB와 연결
         if (req.getInterestIds() != null && !req.getInterestIds().isEmpty()) {
             for (Long interestId : req.getInterestIds()) {
                 Interest interest = interestRepository.findById(interestId)
@@ -231,6 +233,148 @@ public class AuthService {
 
         return new AddressInfo(city, state);
     }
+
+    // JobSeeker 프로필 수정
+    @Transactional
+    public void updateJobSeekerProfile(String jwt, JobSeekerProfileUpdateRequest req) {
+
+        String firebaseUid = jwtProvider.getFirebaseUid(jwt);
+
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new IllegalArgumentException("유저 없음"));
+
+        JobSeekerProfile profile = jobSeekerProfileRepository.findById(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("구직자 프로필 없음"));
+
+        // 1. User 수정
+        user.setName(req.getName());
+        user.setEmail(req.getEmail());
+        user.setPhone(req.getPhone());
+
+        if (req.getGender() != null) {
+            user.setGender(User.Gender.valueOf(req.getGender().name()));
+        }
+
+        if (req.getProfileImageId() != null) {
+            Image profileImage = imageRepository.findById(req.getProfileImageId())
+                    .orElseThrow(() -> new IllegalArgumentException("프로필 이미지 존재하지 않음"));
+
+            user.setProfileImage(profileImage);
+        }
+
+        userRepository.save(user);
+
+        // 2. JobSeekerProfile 수정
+        profile.setCareer(req.getCareer());
+        profile.setBio(req.getBio());
+
+        if (req.getHomeAddress() != null) {
+
+            profile.setHomeAddress(req.getHomeAddress());
+
+            // 위도/경도 재계산
+            Map<String, Double> coords = geoService.getCoordinates(req.getHomeAddress());
+
+            if (coords == null
+                    || coords.get("lat") == null
+                    || coords.get("lng") == null) {
+                throw new IllegalStateException("주소 좌표 변환 실패");
+            }
+
+            profile.setLat(coords.get("lat"));
+            profile.setLng(coords.get("lng"));
+
+            // city / state 재계산
+            AddressInfo addrInfo = parseCityAndState(req.getHomeAddress());
+
+            profile.setCity(addrInfo.getCity());
+            profile.setState(addrInfo.getState());
+        }
+
+        jobSeekerProfileRepository.save(profile);
+
+        // 3. 관심사 전체 교체
+        if (req.getInterestIds() != null) {
+
+            jobSeekerInterestRepository.deleteByJobSeekerProfile(profile);
+
+            for (Long interestId : req.getInterestIds()) {
+
+                Interest interest = interestRepository.findById(interestId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("존재하지 않는 interest ID: " + interestId));
+
+                JobSeekerInterest jsi = new JobSeekerInterest();
+
+                jsi.setJobSeekerProfile(profile);
+                jsi.setInterest(interest);
+                jsi.setId(new JobSeekerInterestId(user.getId(), interest.getId()));
+
+                jobSeekerInterestRepository.save(jsi);
+            }
+        }
+    }
+
+
+    // Employer 프로필 수정
+    @Transactional
+    public void updateEmployerProfile(String jwt, EmployerProfileUpdateRequest req) {
+
+        String firebaseUid = jwtProvider.getFirebaseUid(jwt);
+
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new IllegalArgumentException("유저 없음"));
+
+        EmployerProfile profile = employerProfileRepository.findById(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("구인자 프로필 없음"));
+
+        // 1. User 수정
+        user.setName(req.getName());
+        user.setEmail(req.getEmail());
+        user.setPhone(req.getPhone());
+
+        if (req.getGender() != null) {
+            user.setGender(User.Gender.valueOf(req.getGender().name()));
+        }
+
+        if (req.getProfileImageId() != null) {
+            Image profileImage = imageRepository.findById(req.getProfileImageId())
+                    .orElseThrow(() -> new IllegalArgumentException("프로필 이미지 존재하지 않음"));
+
+            user.setProfileImage(profileImage);
+        }
+
+        userRepository.save(user);
+
+        // 2. EmployerProfile 수정
+        profile.setCompanyName(req.getCompanyName());
+
+        if (req.getBusinessAddress() != null) {
+
+            profile.setBusinessAddress(req.getBusinessAddress());
+
+            // 위도/경도 재계산
+            Map<String, Double> coords = geoService.getCoordinates(req.getBusinessAddress());
+
+            if (coords == null
+                    || coords.get("lat") == null
+                    || coords.get("lng") == null) {
+                throw new IllegalStateException("사업장 주소 좌표 변환 실패");
+            }
+
+            profile.setLat(coords.get("lat"));
+            profile.setLng(coords.get("lng"));
+
+            // city / state 재계산
+            AddressInfo addrInfo = parseCityAndState(req.getBusinessAddress());
+
+            profile.setCity(addrInfo.getCity());
+            profile.setState(addrInfo.getState());
+        }
+
+        employerProfileRepository.save(profile);
+    }
+
 
     @Getter
     @AllArgsConstructor

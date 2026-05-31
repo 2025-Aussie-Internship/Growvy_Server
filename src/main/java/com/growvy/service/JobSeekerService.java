@@ -85,8 +85,6 @@ public class JobSeekerService {
                     res.setState(post.getState());
                     res.setCity(post.getCity());
                     res.setCreatedAt(post.getCreatedAt());
-
-                    //
                     res.setStatus(app.getStatus().name());
 
                     res.setImageUrls(

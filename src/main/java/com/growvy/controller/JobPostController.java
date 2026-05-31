@@ -28,7 +28,7 @@ public class JobPostController {
     private final UserRepository userRepository;
 
     // 모든 일 최신순 조회 API (신청한 것 제외)
-    @Operation(summary = "최신순 조회 API", description = "모든 post를 최신순으로 조회")
+    @Operation(summary = "[공통] 최신순 조회 API", description = "모든 post를 최신순으로 조회")
     @GetMapping("/all")
     public List<JobPostResponse> getAllPostsExcludingMyApplications(
             @RequestHeader("Authorization") String header
@@ -45,7 +45,7 @@ public class JobPostController {
     }
 
     // 모든 일 인기순 조회 API (신청한 것 제외)
-    @Operation(summary = "인기순 조회 API", description = "모든 post를 인기순으로 조회")
+    @Operation(summary = "[공통] 인기순 조회 API", description = "모든 post를 인기순으로 조회")
     @GetMapping("/all/popular")
     public List<JobPostResponse> getAllPostsByPopularity(
             @RequestHeader("Authorization") String header
@@ -62,7 +62,7 @@ public class JobPostController {
     }
 
     // 상세 조회 API
-    @Operation(summary = "상세 조회 API", description = "개별 post를 상세 조회")
+    @Operation(summary = "[공통] 상세 조회 API", description = "개별 post를 상세 조회")
     @GetMapping("/{postId}")
     public JobPostResponse getPostDetail(
             @RequestHeader("Authorization") String header,
@@ -77,7 +77,7 @@ public class JobPostController {
 
 
     // 구인자 공고 등록 API
-    @Operation(summary = "Employer-공고 등록 API", description = "공고 등록")
+    @Operation(summary = "[Employer] 공고 등록 API", description = "공고 등록")
     @PostMapping("/upload")
     public ResponseEntity<JobPostResponse> createPost(
             @RequestHeader("Authorization") String header,
@@ -96,7 +96,7 @@ public class JobPostController {
         return ResponseEntity.ok(res);
     }
 
-    @Operation(summary = "JobSeeker-특정 기간 공고 조회 API", description = "today, week, calender 공고 조회")
+    @Operation(summary = "[JobSeeker] 특정 기간 공고 조회 API", description = "today, week, calender 공고 조회")
     // 내가 신청한 일 중에 특정기간 조회
     @GetMapping("my/range")
     public List<JobPostResponse> getMyAcceptedClosedJobs(

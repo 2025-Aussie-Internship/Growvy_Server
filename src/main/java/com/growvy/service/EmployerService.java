@@ -22,30 +22,50 @@ public class EmployerService {
     private final UserRepository userRepository;
     private final ApplicationRepository applicationRepository;
 
-    // Employer가 올린 OPEN 공고 조회
+    // Employer가 올린 OPEN / CLOSED 공고 조회
     public List<JobPostResponse> getMyPosts(User employerUser) {
-        List<JobPost> posts = jobPostRepository.findByUserAndStatus(
-                employerUser.getEmployerProfile().getUser(), JobPost.Status.OPEN
+        List<JobPost.Status> statuses = List.of(JobPost.Status.OPEN, JobPost.Status.CLOSED);
+
+        List<JobPost> posts = jobPostRepository.findByUserAndStatusIn(
+                employerUser, statuses
         );
 
-        // DTO 변환 + 최근 생성 순 정렬
         return posts.stream()
-                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt())) // 최근 생성이 위
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(post -> {
                     JobPostResponse res = new JobPostResponse();
                     res.setId(post.getId());
                     res.setTitle(post.getTitle());
+                    res.setCompanyName(post.getCompanyName());
+                    res.setDescription(post.getDescription());
+                    res.setCount(post.getCount());
                     res.setStartDate(post.getStartDate());
                     res.setEndDate(post.getEndDate());
                     res.setStartTime(post.getStartTime());
                     res.setEndTime(post.getEndTime());
+                    res.setHourlyWage(post.getHourlyWage());
+                    res.setJobAddress(post.getJobAddress());
+                    res.setLat(post.getLat());
+                    res.setLng(post.getLng());
+                    res.setCity(post.getCity());
+                    res.setState(post.getState());
+                    res.setCreatedAt(post.getCreatedAt());
                     res.setStatus(post.getStatus().name());
+                    res.setTags(post.getJobPostTags().stream()
+                            .map(tag -> tag.getInterest().getName())
+                            .toList());
+                    res.setImageUrls(post.getJobPostImages() != null
+                            ? post.getJobPostImages().stream()
+                            .map(JobPostImage::getImageUrl)
+                            .toList()
+                            : new ArrayList<>());
                     return res;
                 })
                 .toList();
     }
 
-    // Employer가 올린 DONE 공고 조회 (끝난 일 기준)
+
+    // Employer가 올린 DONE 공고 조회
     public List<JobPostResponse> getMyDonePosts(User employerUser, String type) {
         List<JobPost> posts;
 
@@ -61,22 +81,40 @@ public class EmployerService {
             posts = jobPostRepository.findByUserAndStatus(employerUser.getEmployerProfile().getUser(), JobPost.Status.DONE);
         }
 
-        // DTO 변환 + endDate 기준 내림차순 정렬
         return posts.stream()
                 .sorted((a, b) -> b.getEndDate().compareTo(a.getEndDate()))
                 .map(post -> {
                     JobPostResponse res = new JobPostResponse();
                     res.setId(post.getId());
                     res.setTitle(post.getTitle());
+                    res.setCompanyName(post.getCompanyName());
+                    res.setDescription(post.getDescription());
+                    res.setCount(post.getCount());
                     res.setStartDate(post.getStartDate());
                     res.setEndDate(post.getEndDate());
                     res.setStartTime(post.getStartTime());
                     res.setEndTime(post.getEndTime());
+                    res.setHourlyWage(post.getHourlyWage());
+                    res.setJobAddress(post.getJobAddress());
+                    res.setLat(post.getLat());
+                    res.setLng(post.getLng());
+                    res.setCity(post.getCity());
+                    res.setState(post.getState());
+                    res.setCreatedAt(post.getCreatedAt());
                     res.setStatus(post.getStatus().name());
+                    res.setTags(post.getJobPostTags().stream()
+                            .map(tag -> tag.getInterest().getName())
+                            .toList());
+                    res.setImageUrls(post.getJobPostImages() != null
+                            ? post.getJobPostImages().stream()
+                            .map(JobPostImage::getImageUrl) // 여기서 직접 imageUrl 가져오기
+                            .toList()
+                            : new ArrayList<>());
                     return res;
                 })
                 .toList();
     }
+
 
     // 신청한 사람 조회
     @Transactional(readOnly = true)
@@ -129,9 +167,5 @@ public class EmployerService {
             }
         }
         applicationRepository.saveAll(allApplications);
-
-        // 5. 공고 상태 CLOSED로
-        jobPost.setStatus(JobPost.Status.CLOSED);
-        jobPostRepository.save(jobPost);
     }
 }

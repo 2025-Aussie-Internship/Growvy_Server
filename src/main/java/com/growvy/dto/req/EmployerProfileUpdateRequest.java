@@ -1,30 +1,23 @@
 package com.growvy.dto.req;
 
-import com.growvy.entity.User;
+import jakarta.persistence.Column;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
-public class EmployerSignUpRequest {
+public class EmployerProfileUpdateRequest {
 
     // User
     private String name;
     private String email;
-    private LocalDate birthDate;
-    private User.Gender gender;
+    private EmployerSignUpRequest.Gender gender;
     private String phone;
     private Long profileImageId;
-    private Long bannerImageId;
 
     // EmployerProfile
     private String companyName;
     private String businessAddress;
-
-    public enum Gender {
-        MALE,
-        FEMALE
-    }
 }

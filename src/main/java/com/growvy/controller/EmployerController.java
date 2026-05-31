@@ -28,7 +28,7 @@ public class EmployerController {
     private final JwtUtil jwtProvider;
     private final JobPostRepository jobPostRepository;
 
-    @Operation(summary = "Employer-올린 일 목록 조회", description = "내가 올린 모든 일 조회-DONE제외")
+    @Operation(summary = "[Employer] 올린 일 목록 조회", description = "내가 올린 모든 일 조회-DONE제외")
     @GetMapping("/posts")
     public List<JobPostResponse> getMyPosts(
             @RequestHeader("Authorization") String header
@@ -42,7 +42,7 @@ public class EmployerController {
         return employerService.getMyPosts(user);
     }
 
-    @Operation(summary = "Employer-DONE 공고 조회", description = "내가 올린 DONE 공고 조회, 끝난 일 기준 내림차순")
+    @Operation(summary = "[Employer] DONE 공고 조회", description = "내가 올린 DONE 공고 조회, 끝난 일 기준 내림차순")
     @GetMapping("/posts/done")
     public ResponseEntity<List<JobPostResponse>> getMyDonePosts(
             @RequestHeader("Authorization") String header,
@@ -58,7 +58,7 @@ public class EmployerController {
         return ResponseEntity.ok(res);
     }
 
-    @Operation(summary = "Employer-공고 신청자 조회", description = "특정 공고에 신청한 사람들 조회, 최근 신청순")
+    @Operation(summary = "[Employer] 공고 신청자 조회", description = "특정 공고에 신청한 사람들 조회, 최근 신청순")
     @GetMapping("/posts/{jobPostId}/applications")
     public ResponseEntity<List<ApplicationResponse>> getApplicants(
             @RequestHeader("Authorization") String header,
@@ -74,7 +74,7 @@ public class EmployerController {
         return ResponseEntity.ok(res);
     }
 
-    @Operation(summary = "Employer-신청자 수락", description = "공고에 선택된 지원자 수락 및 공고 CLOSED 처리")
+    @Operation(summary = "[Employer] 신청자 수락", description = "공고에 선택된 지원자 수락 및 공고 CLOSED 처리")
     @PostMapping("/posts/{jobPostId}/accept")
     public ResponseEntity<String> acceptApplicants(
             @RequestHeader("Authorization") String header,

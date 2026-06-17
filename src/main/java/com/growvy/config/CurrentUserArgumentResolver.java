@@ -23,7 +23,6 @@ public class CurrentUserArgumentResolver
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
-
         return parameter.hasParameterAnnotation(CurrentUser.class)
                 && parameter.getParameterType().equals(User.class);
     }
@@ -47,8 +46,9 @@ public class CurrentUserArgumentResolver
 
         String jwt = header.replace("Bearer ", "").trim();
 
+        // 🟢 파이어베이스 검증기 대신, 백엔드 자체 토큰 파서를 사용하도록 변경!
         String firebaseUid =
-                jwtUtil.getFirebaseUid(jwt);
+                jwtUtil.getFirebaseUidFromBackendToken(jwt);
 
         return userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() ->

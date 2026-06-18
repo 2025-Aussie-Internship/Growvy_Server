@@ -1,21 +1,18 @@
 package com.growvy.dto.req;
 
-import com.growvy.entity.User;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Getter
 @Setter
-public class JobSeekerSignUpRequest {
+public class JobSeekerProfileUpdateRequest {
 
     // User
     private String name;
     private String email;
-    private LocalDate birthDate;
-    private Gender gender;
+    private JobSeekerSignUpRequest.Gender gender;
     private String phone;
     private Long profileImageId;
 
@@ -26,9 +23,4 @@ public class JobSeekerSignUpRequest {
 
     // Interest
     private List<Long> interestIds;
-
-    public enum Gender {
-        MALE,
-        FEMALE
-    }
 }
